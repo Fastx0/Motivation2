@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار السلوك التنظيمي - درس الدافعية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #e0e5e2;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .app-container {
+            background-color: #f5f2eb;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 750px;
+            overflow: hidden;
+        }
+        .option-btn {
+            transition: all 0.2s ease;
+            border: 1px solid #d5cec4;
+        }
+        .option-btn:hover:not(:disabled) {
+            border-color: #5f8069;
+            background-color: #e8e4d9;
+        }
+        .option-btn.correct { background-color: #10b981; border-color: #059669; color: white; }
+        .option-btn.wrong { background-color: #ef4444; border-color: #dc2626; color: white; }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="app-container flex flex-col min-h-[520px]">
+        <!-- Header -->
+        <header class="bg-[#2c3e35] text-[#f5f2eb] p-5 text-center shadow-md">
+            <h1 class="text-xl sm:text-2xl font-extrabold mb-1"><i class="fa-solid fa-graduation-cap ml-2 text-[#8bb19a]"></i>اختبار مقرر السلوك التنظيمي</h1>
+            <p class="text-xs sm:text-sm text-[#d1d5db]">تقييم درس الدافعية التنظيمية</p>
+        </header>
+
+        <!-- Main Body -->
+        <div id="app-content" class="flex-grow p-6 flex flex-col justify-center">
+            <div class="flex justify-center items-center h-full">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-[#5f8069]"></i>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'org-behavior-quiz-v2';
+        
+        let app, auth, db, user;
+
+        if (firebaseConfig) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        }
+
+        async function initAuth() {
+            if (!auth) return;
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    const userCred = await signInWithCustomToken(auth, __initial_auth_token);
+                    user = userCred.user;
+                } else {
+                    const userCred = await signInAnonymously(auth);
+                    user = userCred.user;
+                }
+            } catch (e) {
+                console.error("Auth failed", e);
+            }
+        }
+
+        // الأسئلة السهلة المباشرة (1 عرف، 3 صح وخطأ، 3 اختيار من متعدد)
+        const questions = [
+            {
+                type: "عرف",
+                question: "ما هو الوصف الأدق لمفهوم 'الدافعية' في بيئة العمل؟",
+                options: [
+                    "القوة الداخلية التي تحفز الفرد وتوجهه لتحقيق الأهداف التنظيمية.",
+                    "الالتزام بالحضور والانصراف في الوقت المحدد فقط.",
+                    "تأدية المهام الوظيفية خوفاً من الخصومات أو العقوبات الإدارية."
+                ],
+                correctAnswer: 0
+            },
+            {
+                type: "صح وخطأ",
+                question: "الدافعية الداخلية تعني أن الموظف يؤدي مهامه برغبة ذاتية نابعة من حبه للتعلم والتطور.",
+                options: ["صح", "خطأ"],
+                correctAnswer: 0
+            },
+            {
+                type: "صح وخطأ",
+                question: "تحديد الأهداف الوظيفية بوضوح للموظفين ليس له أي تأثير إيجابي على مستوى تحفيزهم.",
+                options: ["صح", "خطأ"],
+                correctAnswer: 1
+            },
+            {
+                type: "صح وخطأ",
+                question: "توفير بيئة عمل تشجع على التعاون يساهم بشكل كبير في تعزيز دافعية الأفراد وزيادة الحافز الجماعي.",
+                options: ["صح", "خطأ"],
+                correctAnswer: 0
+            },
+            {
+                type: "اختيار من متعدد",
+                question: "أي من الخيارات التالية يعتبر مثالاً واضحاً على (الدافعية الخارجية)؟",
+                options: [
+                    "الشغف بابتكار حلول جديدة للمشاكل التقنية.",
+                    "العمل بجد للحصول على مكافأة مالية أو ترقية وظيفية.",
+                    "الشعور العميق بالرضا النفسي عند إنجاز مهمة صعبة."
+                ],
+                correctAnswer: 1
+            },
+            {
+                type: "اختيار من متعدد",
+                question: "ما هي النتيجة المباشرة لامتلاك الموظفين لدافعية قوية في العمل؟",
+                options: [
+                    "زيادة الصراعات الإدارية داخل الأقسام.",
+                    "تراجع الرغبة في التدريب والتطوير المهني.",
+                    "زيادة الإنتاجية وكفاءة الأداء وتجاوز التحديات بنجاح."
+                ],
+                correctAnswer: 2
+            },
+            {
+                type: "اختيار من متعدد",
+                question: "بصفتك مديراً، ما هو الإجراء الأفضل لتحفيز موظفيك بناءً على مبادئ الدافعية؟",
+                options: [
+                    "المركزية الشديدة وتقليل استقلاليتهم في اتخاذ القرارات.",
+                    "تجاهل إنجازاتهم لتجنب الغرور الوظيفي.",
+                    "تقديم تغذية راجعة مستمرة وبناءة لمساعدتهم على التطور."
+                ],
+                correctAnswer: 2
+            }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let hasAnswered = false;
+        let studentName = "";
+        const appContent = document.getElementById('app-content');
+
+        // التحقق مما إذا كان الرابط يطلب صفحة لوحة الصدارة (مثل: site.com/#leaderboard)
+        function checkRoute() {
+            if (window.location.hash === '#leaderboard') {
+                renderLeaderboardPage();
+            } else {
+                renderLogin();
+            }
+        }
+
+        window.renderLogin = function() {
+            appContent.innerHTML = `
+                <div class="fade-in max-w-md mx-auto text-center">
+                    <div class="mb-4 text-[#5f8069]"><i class="fa-solid fa-user-pen text-4xl"></i></div>
+                    <h2 class="text-xl font-bold text-[#1f2923] mb-2">تسجيل دخول الطالب</h2>
+                    <p class="text-[#4b5563] mb-6 text-sm">الرجاء إدخال اسمك الثنائي للبدء في الاختبار.</p>
+                    
+                    <div class="text-right mb-4">
+                        <label class="block text-sm font-bold text-[#2c3e35] mb-2">الاسم الثنائي:</label>
+                        <input type="text" id="sName" placeholder="مثال: فهد عبد الله" class="w-full px-4 py-3 rounded-lg border-2 border-[#d5cec4] focus:border-[#5f8069] focus:outline-none bg-white text-base" onkeypress="if(event.key==='Enter') startTest()">
+                        <p id="err" class="text-red-500 text-xs mt-1 hidden">الرجاء إدخال الاسم أولاً.</p>
+                    </div>
+                    <button onclick="startTest()" class="w-full bg-[#5f8069] hover:bg-[#4b6653] text-white font-bold py-3 rounded-lg transition-colors">
+                        بدء الاختبار <i class="fa-solid fa-arrow-left mr-1"></i>
+                    </button>
+                    <div class="mt-6 border-t pt-4 text-left">
+                        <a href="#leaderboard" onclick="setTimeout(checkRoute, 50)" class="text-xs text-[#5f8069] font-bold hover:underline">
+                            <i class="fa-solid fa-lock ml-1"></i> لوحة صدارة الدكتور
+                        </a>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => document.getElementById('sName')?.focus(), 100);
+        };
+
+        window.startTest = function() {
+            const val = document.getElementById('sName').value.trim();
+            if (!val) {
+                document.getElementById('err').classList.remove('hidden');
+                return;
+            }
+            studentName = val;
+            currentIdx = 0;
+            score = 0;
+            renderQ();
+        };
+
+        window.renderQ = function() {
+            hasAnswered = false;
+            const q = questions[currentIdx];
+            let opts = '';
+            q.options.forEach((opt, i) => {
+                opts += `<button onclick="choose(${i})" id="b-${i}" class="option-btn w-full text-right px-4 py-3 rounded-xl text-sm sm:text-base font-medium text-[#1f2923] mb-2.5 bg-white flex justify-between items-center">
+                    <span class="pl-3">${opt}</span>
+                    <i id="i-${i}" class="fa-regular fa-circle text-[#d5cec4]"></i>
+                </button>`;
+            });
+
+            appContent.innerHTML = `
+                <div class="fade-in max-w-xl mx-auto">
+                    <div class="flex justify-between items-center mb-3 text-xs font-bold text-[#4b5563]">
+                        <span class="bg-[#e8e4d9] px-2.5 py-1 rounded text-[#2c3e35]">السؤال ${currentIdx + 1} من ${questions.length}</span>
+                        <span>${studentName}</span>
+                    </div>
+                    <h2 class="text-base sm:text-lg font-bold text-[#1f2923] mb-4">${q.question}</h2>
+                    <div class="flex flex-col">${opts}</div>
+                    <div id="nxt" class="mt-4 text-left hidden">
+                        <button onclick="nextQ()" class="bg-[#2c3e35] text-white text-sm font-bold py-2.5 px-6 rounded-lg">السؤال التالي <i class="fa-solid fa-chevron-left mr-1"></i></button>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.choose = function(idx) {
+            if (hasAnswered) return;
+            hasAnswered = true;
+            const q = questions[currentIdx];
+            if (idx === q.correctAnswer) {
+                score++;
+                document.getElementById(`b-${idx}`).classList.add('correct');
+                document.getElementById(`i-${idx}`).className = "fa-solid fa-circle-check text-white";
+            } else {
+                document.getElementById(`b-${idx}`).classList.add('wrong');
+                document.getElementById(`i-${idx}`).className = "fa-solid fa-circle-xmark text-white";
+                document.getElementById(`b-${q.correctAnswer}`).classList.add('correct');
+                document.getElementById(`i-${q.correctAnswer}`).className = "fa-solid fa-circle-check text-white";
+            }
+            for(let i=0; i<q.options.length; i++) document.getElementById(`b-${i}`).disabled = true;
+            document.getElementById('nxt').classList.remove('hidden');
+        };
+
+        window.nextQ = function() {
+            currentIdx++;
+            if (currentIdx < questions.length) renderQ();
+            else saveAndFinish();
+        };
+
+        window.saveAndFinish = async function() {
+            appContent.innerHTML = `<div class="text-center py-10"><i class="fa-solid fa-circle-notch fa-spin text-3xl text-[#5f8069] mb-3"></i><p class="text-sm font-bold">جاري حفظ النتيجة في السجل...</p></div>`;
+            
+            if (user && db) {
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'grades'), {
+                        name: studentName,
+                        score: score,
+                        total: questions.length,
+                        time: Date.now()
+                    });
+                } catch(e) { console.error(e); }
+            }
+
+            appContent.innerHTML = `
+                <div class="fade-in text-center max-w-md mx-auto py-6">
+                    <i class="fa-solid fa-circle-check text-5xl text-[#5f8069] mb-3"></i>
+                    <h2 class="text-xl font-bold mb-1">تم إرسال إجابتك بنجاح!</h2>
+                    <p class="text-gray-600 text-sm mb-4">شكراً لك يا ${studentName}، تم حفظ نتيجتك في نظام الدكتور.</p>
+                    <div class="bg-white p-4 rounded-xl border mb-6">
+                        <span class="text-xs text-gray-500">درجتك النهائية</span>
+                        <div class="text-3xl font-black text-[#5f8069]" dir="ltr">${score} / ${questions.length}</div>
+                    </div>
+                    <button onclick="renderLogin()" class="text-sm text-[#5f8069] font-bold hover:underline">مشاركة طالب آخر</button>
+                </div>
+            `;
+        };
+
+        window.renderLeaderboardPage = async function() {
+            appContent.innerHTML = `<div class="text-center py-10"><i class="fa-solid fa-circle-notch fa-spin text-3xl text-[#5f8069] mb-3"></i><p class="text-sm font-bold">جاري تحميل سجل درجات الطلاب...</p></div>`;
+            
+            let list = [];
+            if (user && db) {
+                try {
+                    const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'grades'));
+                    snap.forEach(d => list.push(d.data()));
+                    list.sort((a,b) => b.score - a.score || a.time - b.time);
+                } catch(e) { console.error(e); }
+            }
+
+            let html = '';
+            if(list.length === 0) {
+                html = '<div class="text-center text-gray-500 py-6 text-sm">لم يسجل أي طالب حتى الآن.</div>';
+            } else {
+                list.forEach((item, index) => {
+                    html += `
+                        <div class="flex justify-between items-center p-3 mb-2 bg-white rounded-lg border text-sm">
+                            <div class="flex items-center">
+                                <span class="font-bold text-[#5f8069] w-6 ml-2">${index + 1}</span>
+                                <span class="font-bold text-[#1f2923]">${item.name}</span>
+                            </div>
+                            <span class="font-black text-[#2c3e35]" dir="ltr">${item.score} / ${item.total}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            appContent.innerHTML = `
+                <div class="fade-in max-w-xl mx-auto w-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-[#1f2923]"><i class="fa-solid fa-list-ol ml-2 text-[#8bb19a]"></i>سجل درجات الطلاب (مرتبة من الأعلى)</h3>
+                        <a href="#" onclick="setTimeout(checkRoute, 50)" class="bg-[#2c3e35] text-white text-xs px-3 py-1.5 rounded-lg">رجوع للاختبار</a>
+                    </div>
+                    <div class="bg-[#f5f2eb] p-3 rounded-xl border h-[300px] overflow-y-auto">${html}</div>
+                    <div class="mt-4 text-center">
+                        <span class="text-xs text-gray-500">إجمالي الطلاب المشاركين: ${list.length}</span>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.onload = async function() {
+            await initAuth();
+            checkRoute();
+        };
+        window.onhashchange = checkRoute;
+    </script>
+</body>
+</html>
